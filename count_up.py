@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+#%%
 # this is a python script template
 # this next line will download the file using curl
 
@@ -31,11 +32,25 @@ if not os.path.exists(gff):
 
 if not os.path.exists(fasta):
     os.system("curl -O ftp://ftp.ensemblgenomes.org/pub/bacteria/release-45/fasta/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655/dna/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna.chromosome.Chromosome.fa.gz")
-    
+
+i = 0
+# [0: sequence, 1: source, 2: feature, 3: start, 4: end, 5: score, 6: strand, 7: phase, 8: attributes]
+number_of_genes = 0
 with gzip.open(gff,"rt") as fh:
     # now add code to process this
     gff = csv.reader(fh,delimiter="\t")
     for row in gff:
-        if row[0].startswith("#"):
-            continue
-        print(row[3],row[6])
+        if not row[0].startswith("#"):
+            if row[2] == "gene":
+                number_of_genes += 1
+                # if i is 30:
+                    # break
+                # print(row[2])
+                i += 1
+
+# Bash test: 
+# zcat < Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.37.gff3.gz | cut -f 3,3 | grep -v ### | grep -v #! | grep -v ## | grep gene | sort | uniq -c
+print('Total number of genes: ' +  str(number_of_genes))
+assert number_of_genes == 4142, 'number_of_genes = ' + str(number_of_genes) + ', expected = 4142'
+
+# %%
