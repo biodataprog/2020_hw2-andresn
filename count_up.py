@@ -42,7 +42,7 @@ with gzip.open(gff,"rt") as fh:
         if not row[0].startswith("#"):
             if not ENABLE_TESTS and i == 30:
                 break
-            if row[2] == "gene":
+            if row[2] == "gene" and row[6] == '+':
                 number_of_genes += 1
                 total_length_of_genes += int(row[4]) - int(row[3])
             i += 1
@@ -62,7 +62,7 @@ answers = [
     '2. Total number of genes: {:,}'.format(number_of_genes),
     '3. Total length of genes: {:,}'.format(total_length_of_genes),
     '4. Total length of genome: {:,}'.format(total_length_of_genome),
-    '5. Perecent of genome which is coding: {:.2%}'.format(total_length_of_genes / total_length_of_genome)
+    '5. Percent of genome which is coding: {:.2%}'.format(total_length_of_genes / total_length_of_genome)
 ]
 
 for answer in answers:
@@ -70,11 +70,11 @@ for answer in answers:
 
 if ENABLE_TESTS:
     # Bash test: zcat < Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.37.gff3.gz | cut -f 3,3 | grep -v ### | grep -v #! | grep -v ## | grep gene | sort | uniq -c
-    assert answers[0] == '2. Total number of genes: 4,142', 'Answer 1 = ' + answers[0] + ', expected = 2. Total number of genes: 4,142'
+    assert answers[0] == '2. Total number of genes: 2,014', 'Answer 1 = ' + answers[0] + ', expected = 2. Total number of genes: 2,014'
     # Bash test: zcat < Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.37.gff3.gz | awk '!/^#+/' |  awk '$3 ~ /^gene$/ {print $0}' | awk '{sum += $5-$4} END {print sum}'
-    assert answers[1] == '3. Total length of genes: 3,944,686', 'Answer 1 = ' + answers[1] + ', expected = 3. Total length of genes: 3,944,686'
+    assert answers[1] == '3. Total length of genes: 1,911,868', 'Answer 1 = ' + answers[1] + ', expected = 3. Total length of genes: 1,911,868'
     # Bash test: zcat < Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna.chromosome.Chromosome.fa.gz | tail -n 77361 | tr -d '\n' | wc -c
     assert answers[2] == '4. Total length of genome: 4,641,652', 'Answer 1 = ' + answers[2] + ', expected = 4. Total length of genome: 4,641,652'
-    assert answers[3] == '5. Perecent of genome which is coding: 84.98%', 'Answer 1 = ' + answers[3] + ', expected = 5. Perecent of genome which is coding: 84.98%'
+    assert answers[3] == '5. Percent of genome which is coding: 41.19%', 'Answer 1 = ' + answers[3] + ', expected = 5. Percent of genome which is coding: 41.19%'
 
 # %%
