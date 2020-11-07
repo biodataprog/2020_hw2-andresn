@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+#%%
 import os, gzip, itertools
 
 # this is code which will parse FASTA files
@@ -29,10 +29,134 @@ if not os.path.exists(file1):
 if not os.path.exists(file2):
     os.system("curl -O %s"%(url2))
 
-with gzip.open(file1,"rt") as fh:
-    seqs = aspairs(fh)
+from collections import defaultdict 
 
-    for seq in seqs:
-        seqname  = seq[0]
-        seqstring= seq[1]
-        print(seqname, " first 10 bases are ", seqstring[0:10])
+def get_answers_to_questions(files, species_labels, nucleotides):
+    codons_seen_in_each_file = defaultdict(dict) # { AUG: { SP1: int, SP2: int, ...} }
+    species_to_codons = defaultdict(dict) # { SP1: [ AUG, ATC, ...], SP2: [ AUG, GGT, ...] }
+    total_number_of_genes_in_each_file = defaultdict(dict) # { SP1: int, SP2: int, ...}
+    total_length_of_genes_in_each_file = defaultdict(dict) # { SP1: int, SP2: int, ...}
+    g_plus_c_count_in_each_file = defaultdict(dict) # { SP1: int, SP2: int, ...}
+    total_codons_in_each_file = defaultdict(dict) # { SP1: int, SP2: int, ...}
+    species_analyzed = 0
+
+    for file in files:
+        with gzip.open(file,"rt") as fh:
+            seqs = aspairs(fh)
+
+            for seq in seqs:
+                seqname  = seq[0]
+                seqstring = seq[1]
+                spn = species_labels[species_analyzed]
+
+                if spn not in total_number_of_genes_in_each_file:
+                    total_number_of_genes_in_each_file[
+                        spn
+                    ] = 1
+                else:
+                    total_number_of_genes_in_each_file[
+                        spn
+                    ] += 1                  
+
+                total_length_of_sequence = len(seqstring)
+
+                if spn not in total_length_of_genes_in_each_file:
+                    total_length_of_genes_in_each_file[
+                        spn
+                    ] = total_length_of_sequence
+                else:
+                    total_length_of_genes_in_each_file[
+                        spn
+                    ] += total_length_of_sequence
+                
+                for i in range(0, total_length_of_sequence, 3):
+                    codon = seqstring[i:i+3]
+
+                    # piggy back off each codon to check to see if G or C are in there, increase counts
+                    for nucleotide in nucleotides:
+                        if nucleotide in codon:
+                            if spn not in g_plus_c_count_in_each_file:
+                                g_plus_c_count_in_each_file[
+                                    spn
+                                ] = 1
+                            else:
+                                g_plus_c_count_in_each_file[
+                                    spn
+                                ] += 1
+
+                    if len(codon) == 3:
+                        if spn not in species_to_codons:
+                            species_to_codons[spn] = [codon]
+                        else:
+                            species_to_codons[spn].append(codon)
+
+                        if codon not in codons_seen_in_each_file:
+                            # add this codon to our hash table and initialize with +1 for the current species we're on and 0 for the others
+                            codons_seen_in_each_file[
+                                codon
+                            ] = defaultdict(dict)
+                            for species in species_labels:
+                                codons_seen_in_each_file[
+                                    codon
+                                ][
+                                    species 
+                                ] = 1 if species == spn else 0
+                        else:
+                            codons_seen_in_each_file[
+                                codon
+                            ][
+                                spn 
+                            ] += 1
+
+
+        species_analyzed += 1
+
+    total_number_of_genes_in_each_file_display_txt = []
+    for species in total_number_of_genes_in_each_file:
+        total_number_of_genes_in_each_file_display_txt.append(
+            '{}: {:,}'.format(species, total_number_of_genes_in_each_file[species])
+        )
+
+    total_length_of_genes_in_each_file_display_txt = []
+    g_plus_c_frequency_in_each_file = {}
+    for species in total_length_of_genes_in_each_file:
+        total_length_of_genes_in_each_file_display_txt.append(
+            '{}: {:,}'.format(species, total_length_of_genes_in_each_file[species])
+        )
+        g_plus_c_frequency_in_each_file[species] = g_plus_c_count_in_each_file[species] / total_length_of_genes_in_each_file[species]
+    
+    g_plus_c_frequency_in_each_file_display_txt = []
+    for species in g_plus_c_frequency_in_each_file:
+        g_plus_c_frequency_in_each_file_display_txt.append(
+            '{}: {:.2%}'.format(species, g_plus_c_frequency_in_each_file[species])
+        )
+    
+    codons_seen_in_each_file_display_txt = []
+    for species in species_labels:
+        codons_seen_in_each_file_display_txt.append(
+            '{}: {:,}'.format(species, len(species_to_codons[species]))
+        )
+    
+    codons_display_table  = [
+        '{:^20}{:^30}{:^18}'.format('Codon', 'Frequency in Sp1', 'Frequency in Sp2')
+    ]
+    for codon in codons_seen_in_each_file:
+        codons_display_row = ['{:^20}'.format(codon)]
+        for species in species_labels:
+            codons_display_row.append('{:^20.2%}'.format(codons_seen_in_each_file[codon][species]/len(species_to_codons[species])))
+        codons_display_table.append('\t'.join(codons_display_row))
+
+    return '\n\n'.join([    
+        '1. The total number of genes in each species: ' + '; '.join(total_number_of_genes_in_each_file_display_txt),
+        '2. Total length of these gene sequences for each file: ' + '; '.join(total_length_of_genes_in_each_file_display_txt),
+        '3. The G+C percentage for the whole dataset (eg the frequency of G + the frequency of C): ' + '; '.join(g_plus_c_frequency_in_each_file_display_txt),
+        '4. Total number codons in each genome.: ' + '; '.join(codons_seen_in_each_file_display_txt),
+        '5. Print out table with three columns: Codon, Frequency in Sp1, Frequency in Sp2:',
+        '\n'.join(codons_display_table)
+    ])
+
+answers = get_answers_to_questions([file1, file2], ['SP1', 'SP2'], ['G', 'C'])
+
+print(answers)
+
+# %%
