@@ -138,15 +138,15 @@ def get_answers_to_questions(files, species_labels, nucleotides):
         )
     
     codons_display_table  = [
-        'Codon\tFrequency in Sp1\tFrequency in Sp2'
+        '{:^20}{:^30}{:^18}'.format('Codon', 'Frequency in Sp1', 'Frequency in Sp2')
     ]
     for codon in codons_seen_in_each_file:
-        codons_display_row = [codon]
+        codons_display_row = ['{:^20}'.format(codon)]
         for species in species_labels:
-            codons_display_row.append('{:.2%}'.format(codons_seen_in_each_file[codon][species]/len(species_to_codons[species])))
+            codons_display_row.append('{:^20.2%}'.format(codons_seen_in_each_file[codon][species]/len(species_to_codons[species])))
         codons_display_table.append('\t'.join(codons_display_row))
 
-    return '\n'.join([    
+    return '\n\n'.join([    
         '1. The total number of genes in each species: ' + '; '.join(total_number_of_genes_in_each_file_display_txt),
         '2. Total length of these gene sequences for each file: ' + '; '.join(total_length_of_genes_in_each_file_display_txt),
         '3. The G+C percentage for the whole dataset (eg the frequency of G + the frequency of C): ' + '; '.join(g_plus_c_frequency_in_each_file_display_txt),
